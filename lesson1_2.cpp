@@ -15,7 +15,7 @@ int main(int arg, char* args[])
 
    SDL_Flip(screen);
 
-   SDL_Delay(2000);
+   SDL_Delay(20000);
 
    SDL_FreeSurface(hello);
 
