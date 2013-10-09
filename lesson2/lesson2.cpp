@@ -13,6 +13,7 @@ SDL_Surface *load_image(std::string filename)
 {
    SDL_Surface* loadedImage = NULL;
    SDL_Surface* optimizedImage = NULL;
+   loadedImage = SDL_LoadBMP(filename.c_str());
    if (loadedImage != NULL)
    {
       optimizedImage = SDL_DisplayFormat(loadedImage);
@@ -41,9 +42,9 @@ int main(int arg, char* args[])
    SDL_WM_SetCaption("Hello World", NULL);
 
    message = load_image("hello.bmp");
-   backgroud = load_image("background.bmp");
+   background = load_image("background.bmp");
    
-   apply_surface(0, 0, backgroud, screen);
+   apply_surface(0, 0, background, screen);
 
    apply_surface(320, 0, background, screen);
    apply_surface(0, 240, background, screen);
@@ -58,7 +59,7 @@ int main(int arg, char* args[])
    SDL_Delay(2000);
 
    SDL_FreeSurface(message);
-   SDL_FreeSurface(backgroud);
+   SDL_FreeSurface(background);
    SDL_Quit();
    return 0;
 }
