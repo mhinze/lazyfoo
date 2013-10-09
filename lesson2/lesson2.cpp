@@ -40,26 +40,25 @@ int main(int arg, char* args[])
 
    SDL_WM_SetCaption("Hello World", NULL);
 
-   message = load_image("hello2.bmp");
+   message = load_image("hello.bmp");
+   backgroud = load_image("background.bmp");
+   
+   apply_surface(0, 0, backgroud, screen);
 
-    SDL_Surface* hello = NULL;
-   SDL_Surface* screen = NULL;
+   apply_surface(320, 0, background, screen);
+   apply_surface(0, 240, background, screen);
+   apply_surface(320, 240, background, screen);
+   apply_surface(180, 140, message, screen);
 
-   SDL_Init(SDL_INIT_EVERYTHING);
+   if (SDL_Flip(screen) == -1)
+   {
+      return 1;
+   }
+   
+   SDL_Delay(2000);
 
-   screen = SDL_SetVideoMode(640, 480, 32, SDL_SWSURFACE);
-
-   hello = SDL_LoadBMP("hello.bmp");
-
-   SDL_BlitSurface(hello, NULL, screen, NULL);
-
-   SDL_Flip(screen);
-
-   SDL_Delay(20000);
-
-   SDL_FreeSurface(hello);
-
+   SDL_FreeSurface(message);
+   SDL_FreeSurface(backgroud);
    SDL_Quit();
-
    return 0;
 }
