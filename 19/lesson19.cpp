@@ -5,16 +5,22 @@
 #include <iostream>
 #include <vector>
 
-const int FRAMES_PER_SECOND = 20;
+using std::cout;
+
+const int FRAMES_PER_SECOND = 60;
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 const int SCREEN_BPP = 32;
+const int SQUARE_HEIGHT = 20; 
+const int SQUARE_WIDTH = 20; 
 const int DOT_HEIGHT = 20;
-const int DOT_WIDTH = 2;
+const int DOT_WIDTH = 20;
 
 SDL_Surface *screen = NULL;
+SDL_Surface *square = NULL;
 SDL_Surface *dot = NULL;
 
+SDL_Rect wall;
 SDL_Event event;
 
 void apply_surface(int x, int y, SDL_Surface* source, SDL_Surface* destination, SDL_Rect* clip = NULL)
@@ -139,6 +145,61 @@ bool Timer::is_paused()
    return paused;
 }
 
+class Square
+{
+   private:
+      SDL_Rect box;
+      int xVel, yVel;
+   public:
+      Square();
+      void handle_input();
+      void move();
+      void show();
+};
+
+bool check_collision(SDL_Rect A, SDL_Rect B)
+{
+   int leftA, leftB;
+   int rightA, rightB;
+   int topA, topB;
+   int bottomA, bottomB;
+
+   // calc the sides of rect A
+   leftA = A.x;
+   rightA = A.x + A.w;
+   topA = A.y;
+   bottomA = A.y + A.h;
+
+   // calc the sides of rect B
+   leftB = B.x;
+   rightB = B.x + B.w;
+   topB = B.y;
+   bottomB = B.y + B.h;
+
+   // if any of the sides from A are outside B
+   if (bottomA <= topB)
+   {
+      return false;
+   }
+
+   if (topA >= bottomB)
+   {
+      return false;
+   }
+
+   if (rightA <= leftB)
+   {
+      return false;
+   }
+
+   if (leftA >= rightB)
+   {
+      return false;
+   }
+
+   return true;
+}
+
 bool check_collision(std::vector<SDL_Rect> &A, std::vector<SDL_Rect> &B)
 {
    int leftA, leftB;
@@ -151,7 +212,7 @@ bool check_collision(std::vector<SDL_Rect> &A, std::vector<SDL_Rect> &B)
       leftA = A[Abox].x;
       rightA = A[Abox].x + A[Abox].w;
       topA = A[Abox].y;
-      bottomA = A[Abox].y + A[Abox].h;
+      bottomA = A[Abox].y;
        
       for(int Bbox = 0; Bbox < B.size(); Bbox++)
       {
@@ -307,6 +368,88 @@ std::vector<SDL_Rect> &Dot::get_rects()
    return box;
 }
 
+
+
+
+Square::Square()
+{
+   box.x = 0;
+   box.y = 0;
+   box.w = SQUARE_WIDTH;
+   box.h = SQUARE_HEIGHT;
+   xVel = 0;
+   yVel = 0;
+}
+
+void Square::move()
+{
+   box.x += xVel;
+   // if the square went too far to the left or right or collided with the wall
+   if ((box.x < 0) || (box.x + SQUARE_WIDTH > SCREEN_WIDTH) || (check_collision(box, wall)))
+   {
+      // move back
+      box.x -= xVel;
+   }
+
+   box.y += yVel;
+
+   // if the square went too far up or down or collided with wall
+   if ((box.y < 0) || (box.y + SQUARE_HEIGHT > SCREEN_HEIGHT) || (check_collision(box, wall)))
+   {
+      // move back
+      box.y -= yVel;
+   }
+}
+
+void Square::handle_input()
+{
+   if (event.type == SDL_KEYDOWN)
+   {
+      switch(event.key.keysym.sym)
+      {
+         case SDLK_UP:
+           yVel -= SQUARE_HEIGHT / 2; 
+           break;
+         case SDLK_DOWN:
+           yVel += SQUARE_HEIGHT / 2;
+           break;
+         case SDLK_LEFT: 
+           xVel -= SQUARE_WIDTH / 2;
+           break;
+         case SDLK_RIGHT:
+           xVel += SQUARE_WIDTH / 2;
+           break;
+         default:
+           break;
+      }
+   }
+   if (event.type == SDL_KEYUP)
+   {
+      switch(event.key.keysym.sym)
+      {
+         case SDLK_UP:
+           yVel += SQUARE_HEIGHT / 2; 
+           break;
+         case SDLK_DOWN:
+           yVel -= SQUARE_HEIGHT / 2;
+           break;
+         case SDLK_LEFT: 
+           xVel += SQUARE_WIDTH / 2;
+           break;
+         case SDLK_RIGHT:
+           xVel -= SQUARE_WIDTH / 2;
+           break;
+         default:
+           break;
+      }
+   }
+}
+
+void Square::show()
+{
+   apply_surface(box.x, box.y, square, screen);
+}
+
 bool init()
 {
    if (SDL_Init(SDL_INIT_EVERYTHING) == -1)
@@ -339,7 +482,7 @@ bool load_files()
 
 void clean_up()
 {
-   SDL_FreeSurface(dot);;
+   SDL_FreeSurface(square);;
    
    SDL_Quit();
 }
