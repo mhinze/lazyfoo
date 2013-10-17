@@ -13,9 +13,13 @@ const int SCREEN_HEIGHT = 480;
 const int SCREEN_BPP = 32;
 const int SQUARE_HEIGHT = 20; 
 const int SQUARE_WIDTH = 20; 
+const int DOT_HEIGHT = 20;
+const int DOT_WIDTH = 20;
 
 SDL_Surface *screen = NULL;
 SDL_Surface *square = NULL;
+SDL_Surface *dot = NULL;
+
 SDL_Rect wall;
 SDL_Event event;
 
@@ -227,8 +231,145 @@ bool check_collision(std::vector<SDL_Rect> &A, std::vector<SDL_Rect> &B)
    return false;
 }
 
-      
-   
+Dot::Dot(int X, int Y)
+{
+   x = X;
+   y = Y;
+
+   xVel = 0;
+   yVel = 0;
+
+   box.resize(11);
+
+   box[0].w = 6;
+   box[0].h = 1;
+
+   box[1].w = 10;
+   box[1].h = 1;
+
+   box[2].w = 14;
+   box[2].h = 1;
+
+   box[3].w = 16;
+   box[3].h = 2;
+
+   box[4].w = 18;
+   box[4].h = 2;
+
+   box[5].w = 20;
+   box[5].h = 6;
+
+   box[6].w = 18;
+   box[6].h = 2;
+
+   box[7].w = 16;
+   box[7].h = 2;
+
+   box[8].w = 14;
+   box[8].h = 1;
+
+   box[9].w = 10;
+   box[9].h = 1;
+
+   box[10].w = 6;
+   box[10].h = 1;
+
+   shift_boxes();
+}
+
+void Dot::shift_boxes()
+{
+   // row offset
+   int r = 0;
+   // go through dot's collision boxes;
+   for(int set = 0; set < box.size(); set++)
+   {
+      // center the box
+      box[set].x = x + (DOT_WIDTH - box[set].w) / 2;
+      // set collision box at its row offset
+      box[set].y = y + r;
+      // move the row offset down the height of the collision box
+      r += box[set].h;
+   }
+}
+
+void Dot::handle_input() 
+{
+   if (event.type == SDL_KEYDOWN)
+   {
+      switch(event.key.keysym.sym)
+      {
+         case SDLK_UP:
+            yVel -= 1;
+            break;
+         case SDLK_DOWN:
+            yVel += 1;
+            break;
+         case SDLK_LEFT:
+            xVel -= 1;
+            break;
+         case SDLK_RIGHT:
+            xVel += 1;
+            break;
+         default: break;
+      }
+   }
+   else if (event.type == SDL_KEYUP)
+   {
+      switch(event.key.keysym.sym)
+      {
+         case SDLK_UP:
+            yVel += 1;
+            break;
+         case SDLK_DOWN:
+            yVel -= 1;
+            break;
+         case SDLK_LEFT:
+            xVel += 1;
+            break;
+         case SDLK_RIGHT:
+            xVel -= 1;
+            break;
+         default: 
+            break;
+      }
+   }
+}
+
+void Dot::move(std::vector<SDL_Rect> &rects)
+{
+   x += xVel;
+   shift_boxes();
+
+   if ((x < 0) || (x + DOT_WIDTH > SCREEN_WIDTH) || (check_collision(box, rects)))
+   {
+      x -= xVel;
+      shift_boxes();
+   }
+
+   y += yVel;
+
+   shift_boxes();
+
+   if ((y < 0) || (y + DOT_HEIGHT > SCREEN_HEIGHT) | (check_collision(box, rects)))
+   {
+      y -= yVel;
+      shift_boxes();
+   }
+}
+
+void Dot::show()
+{
+   apply_surface(x, y, dot, screen);
+}
+
+std::vector<SDL_Rect> &Dot::get_rects()
+{
+   return box;
+}
+
+
+
 
 Square::Square()
 {
@@ -330,8 +471,8 @@ bool init()
 
 bool load_files()
 {
-   square = load_image("square.bmp");
-   if (square == NULL)
+   dot = load_image("dot.bmp");
+   if (dot == NULL)
    {
       return 1;
    }
@@ -361,19 +502,15 @@ int main(int argc, char* args[])
    }
      
    Timer fps;
-   Square mySquare;
 
-   wall.x = 300;
-   wall.y = 40;
-   wall.w = 40;
-   wall.h = 400;
-   
+   Dot myDot(0, 0), otherDot(20, 20);
+
    while(quit == false)
    {
       fps.start();
       while (SDL_PollEvent(&event))
       {
-         mySquare.handle_input();      
+         myDot.handle_input();
 
          if (event.type == SDL_QUIT)
          {
@@ -381,12 +518,12 @@ int main(int argc, char* args[])
          }
       }
 
-      mySquare.move();
+      myDot.move(otherDot.get_rects());
 
       SDL_FillRect(screen, &screen->clip_rect, SDL_MapRGB(screen->format, 0xFF, 0xFF, 0xFF));
-      SDL_FillRect(screen, &wall, SDL_MapRGB(screen->format, 0x77, 0x77, 0x77));
 
-      mySquare.show();
+      otherDot.show();
+      myDot.show();
 
       if (SDL_Flip(screen) == -1)
       {
