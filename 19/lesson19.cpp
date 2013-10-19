@@ -4,6 +4,7 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
+#include <cmath>
 
 using std::cout;
 
@@ -22,6 +23,12 @@ SDL_Surface *dot = NULL;
 
 SDL_Rect wall;
 SDL_Event event;
+
+struct Circle 
+{
+   int x, y;
+   int r;
+};
 
 void apply_surface(int x, int y, SDL_Surface* source, SDL_Surface* destination, SDL_Rect* clip = NULL)
 {
@@ -49,16 +56,13 @@ SDL_Surface *load_image(std::string filename)
 class Dot
 {
    private:
-      int x, y;
-      std::vector<SDL_Rect> box;
+      Circle c;
       int xVel, yVel;
-      void shift_boxes();
    public:
-      Dot(int X, int Y);
+      Dot();
       void handle_input();
-      void move(std::vector<SDL_Rect> &rects);
+      void move(std::vector<SDL_Rect> &rects, Circle &circle);
       void show();
-      std::vector<SDL_Rect> &get_rects();
 };
 
 class Timer
@@ -231,66 +235,67 @@ bool check_collision(std::vector<SDL_Rect> &A, std::vector<SDL_Rect> &B)
    return false;
 }
 
-Dot::Dot(int X, int Y)
+double distance(int x1, int y1, int x2, int y2)
 {
-   x = X;
-   y = Y;
-
-   xVel = 0;
-   yVel = 0;
-
-   box.resize(11);
-
-   box[0].w = 6;
-   box[0].h = 1;
-
-   box[1].w = 10;
-   box[1].h = 1;
-
-   box[2].w = 14;
-   box[2].h = 1;
-
-   box[3].w = 16;
-   box[3].h = 2;
-
-   box[4].w = 18;
-   box[4].h = 2;
-
-   box[5].w = 20;
-   box[5].h = 6;
-
-   box[6].w = 18;
-   box[6].h = 2;
-
-   box[7].w = 16;
-   box[7].h = 2;
-
-   box[8].w = 14;
-   box[8].h = 1;
-
-   box[9].w = 10;
-   box[9].h = 1;
-
-   box[10].w = 6;
-   box[10].h = 1;
-
-   shift_boxes();
+   return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
 }
 
-void Dot::shift_boxes()
+bool check_collision(Circle &A, Circle &B)
 {
-   // row offset
-   int r = 0;
-   // go through dot's collision boxes;
-   for(int set = 0; set < box.size(); set++)
+   if (distance(A.x, A.y, B.x, B.y) < (A.r + B.r))
    {
-      // center the box
-      box[set].x = x + (DOT_WIDTH - box[set].w) / 2;
-      // set collision box at its row offset
-      box[set].y = y + r;
-      // move the row offset down the height of the collision box
-      r += box[set].h;
+      return true;
    }
+   return false;
+}
+
+bool check_collision(Circle &A, std::vector<SDL_Rect> &B)
+{
+   int cX, cY;
+   for(int Bbox = 0; Bbox < B.size(); Bbox++)
+   {
+      if (A.x < B[Bbox].x)
+      {
+         cX = B[Bbox].x;
+      }
+      else if (A.x > B[Bbox].x + B[Bbox].w)
+      {
+         cX = B[Bbox].x + B[Bbox].w;
+      }
+      else
+      {
+         cX = A.x;
+      }
+
+      if (A.y < B[Bbox].y)
+      {
+         cY = B[Bbox].y;
+      }
+      else if (A.y > B[Bbox].y + B[Bbox].h)
+      {
+         cY = B[Bbox].y + B[Bbox].h;
+      }
+      else
+      {
+         cY = A.y;
+      }
+      if (distance(A.x, A.y, cX, cY) < A.r)
+      {
+         return true;
+      }
+   }
+   return false;
+}
+
+
+
+Dot::Dot()
+{
+   xVel = 0;
+   yVel = 0;
+   c.x = 0;
+   c.y = 0;
+   c.r = DOT_WIDTH / 2;
 }
 
 void Dot::handle_input() 
@@ -336,39 +341,28 @@ void Dot::handle_input()
    }
 }
 
-void Dot::move(std::vector<SDL_Rect> &rects)
+void Dot::move(std::vector<SDL_Rect> &rects, Circle &circle)
 {
-   x += xVel;
-   shift_boxes();
+   c.x += xVel;
 
-   if ((x < 0) || (x + DOT_WIDTH > SCREEN_WIDTH) || (check_collision(box, rects)))
+   if ((c.x < 0) || (c.x + DOT_WIDTH > SCREEN_WIDTH) || (check_collision(c, circle)) || check_collision(c, rects))
    {
-      x -= xVel;
-      shift_boxes();
+      c.x -= xVel;
    }
 
-   y += yVel;
+   c.y += yVel;
 
-   shift_boxes();
-
-   if ((y < 0) || (y + DOT_HEIGHT > SCREEN_HEIGHT) | (check_collision(box, rects)))
+   if ((c.y < 0) || (c.y + DOT_HEIGHT > SCREEN_HEIGHT) || (check_collision(c, rects)) || check_collision(c, circle))
    {
-      y -= yVel;
-      shift_boxes();
+      c.y -= yVel;
    }
 }
 
 void Dot::show()
 {
-   apply_surface(x, y, dot, screen);
+   cout << "Dot::show: c.x = " << c.x << " c.y = " << c.y << "\n";
+   apply_surface(c.x - c.r, c.y - c.r, dot, screen);
 }
-
-std::vector<SDL_Rect> &Dot::get_rects()
-{
-   return box;
-}
-
-
 
 
 Square::Square()
@@ -482,7 +476,7 @@ bool load_files()
 
 void clean_up()
 {
-   SDL_FreeSurface(square);;
+   SDL_FreeSurface(dot);;
    
    SDL_Quit();
 }
@@ -503,7 +497,18 @@ int main(int argc, char* args[])
      
    Timer fps;
 
-   Dot myDot(0, 0), otherDot(20, 20);
+   Dot myDot;
+   std::vector<SDL_Rect> box(1);
+   Circle otherDot;
+
+   box[0].x = 60;
+   box[0].y = 60;
+   box[0].w = 40;
+   box[0].h = 40;
+
+   otherDot.x = 30;
+   otherDot.y = 30;
+   otherDot.r = DOT_WIDTH / 2;
 
    while(quit == false)
    {
@@ -518,11 +523,12 @@ int main(int argc, char* args[])
          }
       }
 
-      myDot.move(otherDot.get_rects());
+      myDot.move(box, otherDot);
 
       SDL_FillRect(screen, &screen->clip_rect, SDL_MapRGB(screen->format, 0xFF, 0xFF, 0xFF));
+      SDL_FillRect(screen, &box[0], SDL_MapRGB(screen->format, 0x00, 0x00, 0x00));
+      apply_surface(otherDot.x - otherDot.r, otherDot.y - otherDot.r, dot, screen);
 
-      otherDot.show();
       myDot.show();
 
       if (SDL_Flip(screen) == -1)
